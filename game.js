@@ -25,10 +25,16 @@ let best = Number(localStorage.getItem("nuvryn-gridfall-best") || 0);
 let level = 1;
 let shake = 0;
 let elapsed = 0;
+let lastScoreInt = -1;
+let lastLevelInt = -1;
+let lastBestInt = best;
 
 bestEl.textContent = best;
 
-const keys = { left: false, right: false };
+const keys = {
+  left: false,
+  right: false
+};
 
 const player = {
   x: canvas.width / 2,
@@ -54,6 +60,12 @@ for (let i = 0; i < 110; i++) {
   });
 }
 
+function triggerPop(el) {
+  el.classList.remove("pop");
+  void el.offsetWidth;
+  el.classList.add("pop");
+}
+
 function resetGame() {
   score = 0;
   level = 1;
@@ -65,13 +77,33 @@ function resetGame() {
   pulses = [];
   player.x = canvas.width / 2;
   shake = 0;
+  lastScoreInt = -1;
+  lastLevelInt = -1;
+  lastBestInt = best;
   updateHUD();
 }
 
 function updateHUD() {
-  scoreEl.textContent = Math.floor(score);
-  levelEl.textContent = level;
-  bestEl.textContent = best;
+  const scoreInt = Math.floor(score);
+  if (scoreInt !== lastScoreInt) {
+    scoreEl.textContent = scoreInt;
+    if (lastScoreInt !== -1) triggerPop(scoreEl);
+    lastScoreInt = scoreInt;
+  }
+
+  if (level !== lastLevelInt) {
+    levelEl.textContent = level;
+    if (lastLevelInt !== -1) triggerPop(levelEl);
+    lastLevelInt = level;
+  }
+
+  if (best !== lastBestInt) {
+    bestEl.textContent = best;
+    triggerPop(bestEl);
+    lastBestInt = best;
+  } else {
+    bestEl.textContent = best;
+  }
 }
 
 function startGame() {
@@ -108,7 +140,6 @@ function togglePause() {
   if (!running) return;
   paused = !paused;
   pauseBtn.textContent = paused ? "Resume" : "Pause";
-
   if (paused) {
     beep(240, 0.05, "square");
   } else {
@@ -155,18 +186,19 @@ function spawnObstacle() {
     phase: Math.random() * Math.PI * 2,
     rot: (Math.random() - 0.5) * 0.5,
     angle: Math.random() * Math.PI,
-    glow: 260 + Math.random() * 60
+    glow: 240 + Math.random() * 90,
+    dodged: false
   });
 }
 
-function createBurst(x, y, count = 16, hue = 185) {
+function createBurst(x, y, count = 16, hue = 185, speedScale = 1) {
   for (let i = 0; i < count; i++) {
     particles.push({
       x,
       y,
-      vx: (Math.random() - 0.5) * 300,
-      vy: (Math.random() - 0.5) * 300,
-      life: 0.6 + Math.random() * 0.45,
+      vx: (Math.random() - 0.5) * 300 * speedScale,
+      vy: (Math.random() - 0.5) * 300 * speedScale,
+      life: 0.45 + Math.random() * 0.45,
       age: 0,
       size: 2 + Math.random() * 4,
       hue: hue + (Math.random() * 40 - 20)
@@ -194,8 +226,8 @@ function update(dt) {
   player.x += direction * player.speed * dt;
   player.x = Math.max(player.w / 2 + 10, Math.min(canvas.width - player.w / 2 - 10, player.x));
 
-  trails.push({ x: player.x, y: player.y + 2, life: 0.28, age: 0 });
-  if (trails.length > 24) trails.shift();
+  trails.push({ x: player.x, y: player.y + 2, life: 0.38, age: 0, r: 26 + Math.random() * 10 });
+  if (trails.length > 34) trails.shift();
 
   score += dt * 5.5;
   level = 1 + Math.floor(score / 15);
@@ -214,8 +246,14 @@ function update(dt) {
     o.x += Math.sin(o.phase) * o.drift * dt;
     o.y += o.speed * dt;
 
+    if (!o.dodged && o.y > player.y - 18) {
+      o.dodged = true;
+      createBurst(o.x + o.w / 2, o.y + o.h / 2, 8, 190 + Math.random() * 60, 0.55);
+      createPulse(o.x + o.w / 2, o.y + o.h / 2, "rgba(88,247,232,0.22)");
+    }
+
     if (collide(player, o)) {
-      createBurst(player.x, player.y, 38, 315);
+      createBurst(player.x, player.y, 40, 315, 1.15);
       createPulse(player.x, player.y, "rgba(255,99,182,0.65)");
       shake = 14;
       gameOver();
@@ -224,6 +262,7 @@ function update(dt) {
 
     if (o.y > canvas.height + 80) {
       obstacles.splice(i, 1);
+      createBurst(o.x + o.w / 2, canvas.height - 18, 10, 45, 0.7);
       createPulse(o.x + o.w / 2, canvas.height - 20, "rgba(255,209,102,0.38)");
       beep(520, 0.025, "triangle");
     }
@@ -266,8 +305,8 @@ function drawNebula() {
     canvas.height * 0.18,
     220
   );
-  orb1.addColorStop(0, "rgba(96,131,255,0.28)");
-  orb1.addColorStop(1, "rgba(96,131,255,0)");
+  orb1.addColorStop(0, "rgba(96, 131, 255, 0.30)");
+  orb1.addColorStop(1, "rgba(96, 131, 255, 0)");
 
   const orb2 = ctx.createRadialGradient(
     canvas.width * (0.78 + Math.cos(t * 1.2) * 0.05),
@@ -277,8 +316,8 @@ function drawNebula() {
     canvas.height * 0.22,
     200
   );
-  orb2.addColorStop(0, "rgba(255,99,182,0.20)");
-  orb2.addColorStop(1, "rgba(255,99,182,0)");
+  orb2.addColorStop(0, "rgba(255, 99, 182, 0.22)");
+  orb2.addColorStop(1, "rgba(255, 99, 182, 0)");
 
   const orb3 = ctx.createRadialGradient(
     canvas.width * 0.52,
@@ -288,8 +327,8 @@ function drawNebula() {
     canvas.height * 0.78,
     260
   );
-  orb3.addColorStop(0, "rgba(88,247,232,0.16)");
-  orb3.addColorStop(1, "rgba(88,247,232,0)");
+  orb3.addColorStop(0, "rgba(88, 247, 232, 0.18)");
+  orb3.addColorStop(1, "rgba(88, 247, 232, 0)");
 
   ctx.fillStyle = orb1;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -304,7 +343,7 @@ function drawGrid() {
   const spacing = 44;
   const offset = (performance.now() * 0.02) % spacing;
 
-  ctx.strokeStyle = "rgba(95,132,255,0.10)";
+  ctx.strokeStyle = "rgba(95, 132, 255, 0.10)";
   ctx.lineWidth = 1;
   for (let x = -spacing; x < canvas.width + spacing; x += spacing) {
     ctx.beginPath();
@@ -313,13 +352,14 @@ function drawGrid() {
     ctx.stroke();
   }
 
-  ctx.strokeStyle = "rgba(88,247,232,0.07)";
+  ctx.strokeStyle = "rgba(88, 247, 232, 0.07)";
   for (let y = -spacing; y < canvas.height + spacing; y += spacing) {
     ctx.beginPath();
     ctx.moveTo(0, y + offset);
     ctx.lineTo(canvas.width, y + offset);
     ctx.stroke();
   }
+
   ctx.restore();
 }
 
@@ -328,7 +368,7 @@ function drawStars() {
   for (const s of stars) {
     const blink = 0.55 + Math.sin(elapsed * 2 + s.x * 0.02 + s.y * 0.015) * 0.25;
     ctx.globalAlpha = s.a * blink;
-    ctx.fillStyle = `hsla(${s.hue},100%,78%,1)`;
+    ctx.fillStyle = `hsla(${s.hue}, 100%, 78%, 1)`;
     ctx.fillRect(s.x, s.y, s.s, s.s);
   }
   ctx.restore();
@@ -338,13 +378,14 @@ function drawTrails() {
   ctx.save();
   for (const t of trails) {
     const alpha = Math.max(0, 1 - t.age / t.life);
-    ctx.globalAlpha = alpha * 0.65;
-    const grad = ctx.createRadialGradient(t.x, t.y, 2, t.x, t.y, 24);
-    grad.addColorStop(0, "rgba(88,247,232,0.55)");
-    grad.addColorStop(1, "rgba(88,247,232,0)");
-    ctx.fillStyle = grad;
+    ctx.globalAlpha = alpha * 0.7;
+    const outer = ctx.createRadialGradient(t.x, t.y, 2, t.x, t.y, t.r);
+    outer.addColorStop(0, "rgba(255,99,182,0.18)");
+    outer.addColorStop(0.45, "rgba(88,247,232,0.34)");
+    outer.addColorStop(1, "rgba(88,247,232,0)");
+    ctx.fillStyle = outer;
     ctx.beginPath();
-    ctx.arc(t.x, t.y, 22 * alpha, 0, Math.PI * 2);
+    ctx.arc(t.x, t.y, t.r * alpha, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
@@ -376,6 +417,11 @@ function drawPlayer() {
   ctx.beginPath();
   ctx.arc(0, 0, 7, 0, Math.PI * 2);
   ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,255,255,0.7)";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
   ctx.restore();
 }
 
@@ -385,13 +431,13 @@ function drawObstacle(o) {
   ctx.rotate(o.angle);
 
   const grad = ctx.createLinearGradient(-o.w / 2, -o.h / 2, o.w / 2, o.h / 2);
-  grad.addColorStop(0, "rgba(255,99,182,0.95)");
-  grad.addColorStop(0.5, "rgba(168,85,247,0.92)");
-  grad.addColorStop(1, "rgba(255,209,102,0.95)");
+  grad.addColorStop(0, "rgba(255, 99, 182, 1)");
+  grad.addColorStop(0.45, "rgba(168, 85, 247, 0.98)");
+  grad.addColorStop(1, "rgba(255, 209, 102, 1)");
 
   ctx.fillStyle = grad;
-  ctx.shadowColor = `hsla(${o.glow},100%,66%,0.9)`;
-  ctx.shadowBlur = 22;
+  ctx.shadowColor = `hsla(${o.glow}, 100%, 68%, 1)`;
+  ctx.shadowBlur = 26;
 
   ctx.beginPath();
   ctx.moveTo(-o.w * 0.4, -o.h * 0.5);
@@ -401,9 +447,21 @@ function drawObstacle(o) {
   ctx.closePath();
   ctx.fill();
 
-  ctx.strokeStyle = "rgba(255,255,255,0.28)";
+  ctx.globalAlpha = 0.4;
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.beginPath();
+  ctx.moveTo(-o.w * 0.18, -o.h * 0.22);
+  ctx.lineTo(o.w * 0.12, -o.h * 0.08);
+  ctx.lineTo(-o.w * 0.05, o.h * 0.16);
+  ctx.lineTo(-o.w * 0.28, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "rgba(255,255,255,0.30)";
   ctx.lineWidth = 1;
   ctx.stroke();
+
   ctx.restore();
 }
 
@@ -425,7 +483,7 @@ function drawParticles() {
   for (const p of particles) {
     const alpha = Math.max(0, 1 - p.age / p.life);
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = `hsla(${p.hue},100%,68%,1)`;
+    ctx.fillStyle = `hsla(${p.hue}, 100%, 68%, 1)`;
     ctx.fillRect(p.x, p.y, p.size, p.size);
   }
   ctx.restore();
@@ -478,6 +536,7 @@ function draw() {
   drawParticles();
   drawScanlines();
   drawEdgeGlow();
+
   ctx.restore();
 }
 
@@ -539,7 +598,7 @@ pauseBtn.addEventListener("click", togglePause);
 soundBtn.addEventListener("click", () => {
   soundOn = !soundOn;
   soundBtn.textContent = `Sound: ${soundOn ? "On" : "Off"}`;
-  if (soundOn) beep(440, 0.04, "triangle");
+  beep(440, 0.04, "triangle");
 });
 
 draw();
