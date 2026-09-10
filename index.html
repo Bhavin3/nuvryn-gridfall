@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050816" />
+  <title>NUVRYN // GRIDFALL</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">NUVRYN LAB // 001</p>
+        <h1>GRIDFALL</h1>
+      </div>
+      <div class="top-actions">
+        <button id="pauseBtn" class="ghost">Pause</button>
+        <button id="soundBtn" class="ghost">Sound: On</button>
+      </div>
+    </header>
+
+    <section class="hud">
+      <div class="hud-card">
+        <span>Score</span>
+        <strong id="score">0</strong>
+      </div>
+      <div class="hud-card">
+        <span>Best</span>
+        <strong id="best">0</strong>
+      </div>
+      <div class="hud-card">
+        <span>Level</span>
+        <strong id="level">1</strong>
+      </div>
+    </section>
+
+    <section class="game-shell">
+      <canvas id="game" width="900" height="560" aria-label="Gridfall game canvas"></canvas>
+
+      <div id="overlay" class="overlay">
+        <div class="panel">
+          <p class="eyebrow">ARCADE SURVIVAL</p>
+          <h2 id="overlayTitle">Stay alive.</h2>
+          <p id="overlayText">
+            Move the core, dodge incoming shards, and survive as the grid accelerates.
+          </p>
+          <button id="startBtn" class="primary">Start Run</button>
+          <p class="hint">Desktop: ← → / A D &nbsp; • &nbsp; Mobile: use buttons below</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="mobile-controls" aria-label="Mobile controls">
+      <button id="leftBtn">◀</button>
+      <button id="rightBtn">▶</button>
+    </section>
+
+    <footer>
+      <span>Build. Explore. Create. Repeat.</span>
+      <span>© NUVRYN</span>
+    </footer>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
